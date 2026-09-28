@@ -120,6 +120,27 @@ const API_URL = new URL('api/state', location.href).href;
 
 注意：换成服务器地址后，组件就依赖网络了。`LOAD_URL` 保持默认（App 内内置页面）时接口地址会解析成 `file://` 路径，同步不可用，但本地功能完全正常。这两种形态按需选择。
 
+### 还得放开 ATS
+
+`build_app.sh` 生成的 `Info.plist` 默认不放开发输安全策略。本地形态用 `file://`，不需要；改用 http 服务器地址同步时**必须**补上这一行，否则 WKWebView 会直接拒绝加载，界面变成那块深色错误页：
+
+```xml
+<key>NSAppTransportSecurity</key><dict><key>NSAllowsArbitraryLoads</key><true/></dict>
+```
+
+能用 https 就别用 http，那样连这一行都不用加。白名单形式比全量放开更好，但需要知道具体域名：
+
+```xml
+<key>NSAppTransportSecurity</key><dict>
+  <key>NSExceptionDomains</key><dict>
+    <key>你的域名</key><dict>
+      <key>NSExceptionAllowsInsecureHTTPLoads</key><true/>
+    </dict>
+  </dict>
+</dict>
+```
+
+
 ## 备份
 
 待办条目是不可逆删除的，动手前先留一份：
