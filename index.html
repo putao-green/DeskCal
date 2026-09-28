@@ -228,6 +228,9 @@
     font-size:12px; cursor:pointer; transition:background .15s; white-space:nowrap;
   }
   .mini-btn:hover{ background:rgba(255,255,255,.18); }
+  .mini-btn.danger{ color:#ff9d9d; border-color:rgba(255,157,157,.42); }
+  .mini-btn.danger:hover{ background:rgba(255,120,110,.2); }
+  .mini-btn.danger.armed{ background:rgba(226,74,62,.9); border-color:transparent; color:#fff; }
   .switch{ display:flex; align-items:center; gap:8px; cursor:pointer; color:rgba(255,255,255,.85); }
   .switch input{ accent-color:var(--accent); width:15px; height:15px; }
   .cat-line{ display:flex; align-items:center; gap:8px; padding:3px 0; }
@@ -453,6 +456,11 @@
     <button class="mini-btn" id="exp-ics" data-page-node-id="kEaIVKW70teucTqt0LWeQl">日历 .ics</button>
     <button class="mini-btn" id="imp-json" data-page-node-id="uQ1mZ7rT4hKpWn2cLd8XvB">导入 JSON</button>
     <input type="file" id="imp-file" accept=".json,application/json" style="display:none">
+  </div>
+
+  <h4>清空</h4>
+  <div class="exp-row">
+    <button class="mini-btn danger" id="clear-all">清空全部待办</button>
   </div>
 </div>
 
@@ -1051,6 +1059,37 @@ $('imp-file').onchange = e => {
     e.target.value = '';
   };
   reader.readAsText(file);
+};
+
+/* ================= 清空 ================= */
+// 不用 window.confirm：WKWebView 没有设 WKUIDelegate 时，confirm 会被静默忽略、
+// 恒定返回 false。在浏览器里试是好的，装进 App 就变成「点了没反应」。
+// 改成按钮自身两段式确认：第一下变成「再点一次确认」，四秒内没再点就退回原样。
+const CLEAR_LABEL = '清空全部待办';
+let clearArmedAt = 0;
+function resetClearBtn(){
+  const b = $('clear-all');
+  if(!b) return;
+  b.textContent = CLEAR_LABEL;
+  b.classList.remove('armed');
+}
+$('clear-all').onclick = () => {
+  const btn = $('clear-all');
+  const now = Date.now();
+  if(now - clearArmedAt > 4000){
+    clearArmedAt = now;
+    btn.textContent = '再点一次确认';
+    btn.classList.add('armed');
+    setTimeout(() => { if(clearArmedAt === now){ clearArmedAt = 0; resetClearBtn(); } }, 4000);
+    return;
+  }
+  const n = S.todos.length;
+  S.todos = [];
+  S.hidden = [];
+  clearArmedAt = 0;
+  resetClearBtn();
+  save(); renderSettings(); renderBackstage(); render();
+  toast(n ? `已清空 ${n} 条待办` : '本来就是空的');
 };
 
 /* ================= 杂项 ================= */
