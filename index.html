@@ -1001,11 +1001,14 @@ $('exp-ics').onclick = ()=>{
 /* ================= 导入 ================= */
 // 接受三种形状：{categories,todos} 的导出文件、{todos:[...]}、或一个待办数组。
 // 以「内容 + 日期」判重，同一份文件重复导入不会产生副本。
-function mergeImport(data){
-  const todos = Array.isArray(data) ? data : (data && Array.isArray(data.todos) ? data.todos : null);
+function mergeImport(raw){
+  // 认三种形状：同步服务端导出的 {version,updatedAt,data:{todos,cats}}、
+  // 本面板导出的 {categories,todos}、以及一个待办数组。第一种先剥掉外层 data。
+  const src = (raw && !Array.isArray(raw) && raw.data && typeof raw.data === 'object') ? raw.data : raw;
+  const todos = Array.isArray(src) ? src : (src && Array.isArray(src.todos) ? src.todos : null);
   if(!todos) throw new Error('文件里没有 todos');
-  const cats = Array.isArray(data && data.categories) ? data.categories
-             : (data && Array.isArray(data.cats) ? data.cats : []);
+  const cats = Array.isArray(src && src.categories) ? src.categories
+             : (src && Array.isArray(src.cats) ? src.cats : []);
   for(const c of cats){
     if(!c || !c.id || !c.name) continue;
     if(!S.cats.some(x => x.id === c.id)) S.cats.push({ id:c.id, name:c.name, color:c.color || '#8fa3bf' });
