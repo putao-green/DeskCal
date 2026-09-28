@@ -250,7 +250,7 @@
   .cat-add input[type=color]::-webkit-color-swatch-wrapper{ padding:0; }
   .cat-add input[type=color]::-webkit-color-swatch{ border-radius:50%; border:1px solid rgba(255,255,255,.3); }
   .cat-add .mini-btn{ flex:none; }
-  .exp-row{ display:flex; gap:6px; }
+  .exp-row{ display:flex; flex-wrap:wrap; gap:6px; }
 
   /* ---------- 弹层（新增 / 后台） ---------- */
   .sheet-mask{
@@ -446,11 +446,13 @@
     <button class="mini-btn" id="cat-ok" data-page-node-id="DCYLH6a9BJ9OLtd2XAq1IB">添加</button>
   </div>
 
-  <h4 data-page-node-id="c80ltXyMWZLMYHfCWkzqp7">导出</h4>
+  <h4 data-page-node-id="c80ltXyMWZLMYHfCWkzqp7">导出与导入</h4>
   <div class="exp-row" data-page-node-id="SY8I93Y11X5q7c56r9ax2b">
     <button class="mini-btn" id="exp-json" data-page-node-id="86yIRLPLbBOJ997FAxTOAi">JSON</button>
     <button class="mini-btn" id="exp-csv" data-page-node-id="d46tEdh9LGhmcFSmivruBD">CSV</button>
     <button class="mini-btn" id="exp-ics" data-page-node-id="kEaIVKW70teucTqt0LWeQl">日历 .ics</button>
+    <button class="mini-btn" id="imp-json" data-page-node-id="uQ1mZ7rT4hKpWn2cLd8XvB">导入 JSON</button>
+    <input type="file" id="imp-file" accept=".json,application/json" style="display:none">
   </div>
 </div>
 
@@ -994,6 +996,58 @@ $('exp-ics').onclick = ()=>{
   }
   download(`待办-${stamp}.ics`, ics+'END:VCALENDAR\r\n', 'text/calendar');
   toast('已导出 .ics，可导入日历 App');
+};
+
+/* ================= 导入 ================= */
+// 接受三种形状：{categories,todos} 的导出文件、{todos:[...]}、或一个待办数组。
+// 以「内容 + 日期」判重，同一份文件重复导入不会产生副本。
+function mergeImport(data){
+  const todos = Array.isArray(data) ? data : (data && Array.isArray(data.todos) ? data.todos : null);
+  if(!todos) throw new Error('文件里没有 todos');
+  const cats = Array.isArray(data && data.categories) ? data.categories
+             : (data && Array.isArray(data.cats) ? data.cats : []);
+  for(const c of cats){
+    if(!c || !c.id || !c.name) continue;
+    if(!S.cats.some(x => x.id === c.id)) S.cats.push({ id:c.id, name:c.name, color:c.color || '#8fa3bf' });
+  }
+  let added = 0, skipped = 0;
+  for(const t of todos){
+    const title = t && typeof t.title === 'string' ? t.title.trim().slice(0, 40) : '';
+    if(!title){ skipped++; continue; }
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(t.date) ? t.date : today();
+    if(S.todos.some(x => x.title === title && x.date === date)){ skipped++; continue; }
+    const idFree = t.id != null && !S.todos.some(x => x.id === t.id);
+    S.todos.push({
+      id: idFree ? t.id : Date.now() + Math.floor(Math.random() * 1000),
+      title, date,
+      time: typeof t.time === 'string' ? t.time : '',
+      cat: S.cats.some(c => c.id === t.cat) ? t.cat : (S.cats[0] && S.cats[0].id) || 'work',
+      done: !!t.done,
+      updatedAt: Date.now(),
+    });
+    added++;
+  }
+  return { added, skipped };
+}
+
+$('imp-json').onclick = () => $('imp-file').click();
+$('imp-file').onchange = e => {
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onerror = () => { toast('文件读不出来'); e.target.value = ''; };
+  reader.onload = () => {
+    try {
+      const r = mergeImport(JSON.parse(reader.result));
+      save(); renderCatList(); render();
+      toast(r.added ? `导入完成，新增 ${r.added} 条` + (r.skipped ? `，跳过 ${r.skipped} 条` : '')
+                    : `没有新内容，${r.skipped} 条都已存在`);
+    } catch(err){
+      toast('导入失败：' + ((err && err.message) || '不是有效的 JSON'));
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
 };
 
 /* ================= 杂项 ================= */
