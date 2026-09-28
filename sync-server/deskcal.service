@@ -1,0 +1,14 @@
+[Unit]
+Description=DeskCal Sync Service
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/deskcal/server
+ExecStart=/usr/local/bin/python3.9 -m uvicorn app:app --host 127.0.0.1 --port 8002 --workers 1
+Restart=always
+RestartSec=3
+Environment=DESKCAL_DB=/home/deskcal/data/deskcal.db
+
+[Install]
+WantedBy=multi-user.target

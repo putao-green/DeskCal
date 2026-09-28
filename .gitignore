@@ -1,0 +1,13 @@
+# 构建产物
+DeskCalApp/DeskCal.app/
+DeskCal.app/
+
+# 系统
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+
+# 本地工作区数据，含调试记录与历史笔记
+.workbuddy/
