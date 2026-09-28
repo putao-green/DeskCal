@@ -5,7 +5,7 @@ import WebKit
 // 默认加载打进 App 的 index.html，开箱即用，无需任何后端。
 // 想接自己的同步服务：把 LOAD_URL 改成 "http://你的服务器/deskcal/?widget=1" 即可。
 // 桌面层：CGWindowLevelForKey(.desktopIconWindow)+1 （壁纸之上、普通窗口之下）
-let BUILD_TAG = "deskcal-20260914"
+let BUILD_TAG = "deskcal-20260928"
 let LOAD_URL: String = {
     if let u = Bundle.main.url(forResource: "index", withExtension: "html") {
         return u.absoluteString + "?widget=1"
@@ -100,7 +100,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         container.autoresizingMask = [.width, .height]
 
         let config = WKWebViewConfiguration()
-        config.websiteDataStore = .nonPersistent()
+        // 从 App 包内加载（file://）时要用可落盘的数据仓，否则 localStorage 只存在内存里，
+        // 退出即清空，待办全丢。从远程 http 加载时反过来用非持久仓，保证每次拿到服务端最新数据。
+        config.websiteDataStore = LOAD_URL.hasPrefix("file:") ? .default() : .nonPersistent()
         config.preferences = WKPreferences()
         config.userContentController.add(self, name: "deskcal")
 
